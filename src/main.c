@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    (void)debug; // TODO: pass trace flag to cpu_step
 
     Memory mem;
     memory_init(&mem);
@@ -93,7 +92,16 @@ int main(int argc, char *argv[]) {
     if (loader_load_file(&mem, program, 0x0000) != 0) return 1;
 
     printf("[VM] Starting execution...\n\n");
-    cpu_run(&cpu);
+    if (debug) {
+        while (cpu.running) {
+            char dbuf[80];
+            cpu_disasm(&mem, cpu.pc, dbuf, sizeof(dbuf));
+            printf("[DBG] 0x%08X: %s\n", cpu.pc, dbuf);
+            cpu_step(&cpu);
+        }
+    } else {
+        cpu_run(&cpu);
+    }
     cpu_dump(&cpu);
 
     return 0;

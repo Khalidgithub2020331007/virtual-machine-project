@@ -39,6 +39,11 @@ static VMState  g_vmstate   = VM_STOPPED;
 static char     g_loaded[256] = "";
 static uint32_t g_memscroll  = 0;
 
+// ── Breakpoints ───────────────────────────────────────────────────────────────
+#define MAX_BP 16
+static uint32_t g_bp[MAX_BP];
+static int      g_bp_count = 0;
+
 // ── Buttons ───────────────────────────────────────────────────────────────────
 typedef struct { SDL_Rect r; const char *label; } Btn;
 #define NBTN 5
@@ -59,6 +64,7 @@ static void     act_run(void);
 static void     act_step(void);
 static void     act_pause(void);
 static void     act_reset(void);
+static void     act_toggle_breakpoint(void);
 static TTF_Font *open_font(int sz);
 
 // ── Font loader — tries common monospace paths ────────────────────────────────
@@ -175,9 +181,21 @@ void gui_run(void) {
 
         // Step up to 500 instructions per frame (~30k/s at 60fps)
         if (g_vmstate == VM_RUNNING && g_cpu && g_cpu->running) {
-            for (int i = 0; i < 500 && g_cpu->running; i++)
+            bool bp_hit = false;
+            for (int i = 0; i < 500 && g_cpu->running && !bp_hit; i++) {
                 cpu_step(g_cpu);
-            if (!g_cpu->running) {
+                for (int b = 0; b < g_bp_count; b++) {
+                    if (g_cpu->pc == g_bp[b]) {
+                        char msg[48];
+                        snprintf(msg, sizeof(msg), "[BRKPT] Hit at 0x%08X", g_cpu->pc);
+                        gui_console_append(msg);
+                        g_vmstate = VM_PAUSED;
+                        bp_hit = true;
+                        break;
+                    }
+                }
+            }
+            if (!g_cpu->running && g_vmstate == VM_RUNNING) {
                 g_vmstate = VM_STOPPED;
                 gui_console_append("[VM] HALT — execution finished.");
             }
@@ -491,10 +509,11 @@ static void on_event(const SDL_Event *e) {
 
         case SDL_KEYDOWN:
             switch (e->key.keysym.sym) {
-                case SDLK_ESCAPE: g_running = false; break;
-                case SDLK_F5:     act_run();          break;
-                case SDLK_F10:    act_step();         break;
-                case SDLK_F6:     act_pause();        break;
+                case SDLK_ESCAPE: g_running = false;           break;
+                case SDLK_F5:     act_run();                   break;
+                case SDLK_F10:    act_step();                  break;
+                case SDLK_F6:     act_pause();                 break;
+                case SDLK_F9:     act_toggle_breakpoint();     break;
             }
             break;
 
@@ -575,9 +594,12 @@ static void act_step(void) {
         return;
     }
     if (g_cpu->running) {
+        char dbuf[64];
+        uint32_t old_pc = g_cpu->pc;
+        cpu_disasm(g_mem, old_pc, dbuf, sizeof(dbuf));
         cpu_step(g_cpu);
-        char msg[40];
-        snprintf(msg, sizeof(msg), "[STEP] PC=0x%08X", g_cpu->pc);
+        char msg[96];
+        snprintf(msg, sizeof(msg), "[STEP] 0x%08X: %s", old_pc, dbuf);
         gui_console_append(msg);
         if (!g_cpu->running) {
             g_vmstate = VM_STOPPED;

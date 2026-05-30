@@ -35,4 +35,7 @@ void cpu_run(CPU *cpu);
 void cpu_step(CPU *cpu);
 void cpu_dump(CPU *cpu);
 
+// Decode one instruction at addr into buf; returns number of bytes consumed.
+int  cpu_disasm(Memory *mem, uint32_t addr, char *buf, int bufsz);
+
 #endif

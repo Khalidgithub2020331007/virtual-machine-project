@@ -324,6 +324,103 @@ void cpu_run(CPU *cpu) {
     }
 }
 
+// ── Disassembler ──────────────────────────────────────────────────────────────
+// Reads directly from mem->data so display calls never set mem->error.
+
+static uint8_t  da_byte (Memory *m, uint32_t a)
+    { return (a < MEMORY_SIZE) ? m->data[a] : 0; }
+static uint32_t da_dword(Memory *m, uint32_t a)
+    { return (a+3 < MEMORY_SIZE)
+        ? ((uint32_t)m->data[a] | ((uint32_t)m->data[a+1]<<8)
+          | ((uint32_t)m->data[a+2]<<16) | ((uint32_t)m->data[a+3]<<24)) : 0; }
+
+int cpu_disasm(Memory *mem, uint32_t addr, char *buf, int bufsz) {
+    if (!mem || !buf || bufsz <= 0) return 1;
+    uint8_t op = da_byte(mem, addr);
+    switch (op) {
+        case OP_NOP:  snprintf(buf,bufsz,"NOP"); return 1;
+        case OP_MOV: {
+            uint8_t r = da_byte(mem,addr+1)&0x07; uint32_t v = da_dword(mem,addr+2);
+            snprintf(buf,bufsz,"MOV  R%u, %u",r,v); return 6; }
+        case OP_MOVR: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"MOVR R%u, R%u",d,s); return 3; }
+        case OP_ADD: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"ADD  R%u, R%u",d,s); return 3; }
+        case OP_SUB: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"SUB  R%u, R%u",d,s); return 3; }
+        case OP_MUL: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"MUL  R%u, R%u",d,s); return 3; }
+        case OP_DIV: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"DIV  R%u, R%u",d,s); return 3; }
+        case OP_INC: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"INC  R%u",r); return 2; }
+        case OP_DEC: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"DEC  R%u",r); return 2; }
+        case OP_AND: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"AND  R%u, R%u",d,s); return 3; }
+        case OP_OR: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"OR   R%u, R%u",d,s); return 3; }
+        case OP_XOR: {
+            uint8_t d=da_byte(mem,addr+1)&7, s=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"XOR  R%u, R%u",d,s); return 3; }
+        case OP_NOT: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"NOT  R%u",r); return 2; }
+        case OP_CMP: {
+            uint8_t a2=da_byte(mem,addr+1)&7, b=da_byte(mem,addr+2)&7;
+            snprintf(buf,bufsz,"CMP  R%u, R%u",a2,b); return 3; }
+        case OP_JMP: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"JMP  0x%X",t); return 5; }
+        case OP_JE: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"JE   0x%X",t); return 5; }
+        case OP_JNE: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"JNE  0x%X",t); return 5; }
+        case OP_JG: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"JG   0x%X",t); return 5; }
+        case OP_JL: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"JL   0x%X",t); return 5; }
+        case OP_PUSH: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"PUSH R%u",r); return 2; }
+        case OP_POP: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"POP  R%u",r); return 2; }
+        case OP_CALL: {
+            uint32_t t=da_dword(mem,addr+1);
+            snprintf(buf,bufsz,"CALL 0x%X",t); return 5; }
+        case OP_RET:  snprintf(buf,bufsz,"RET"); return 1;
+        case OP_LOAD: {
+            uint8_t r=da_byte(mem,addr+1)&7; uint32_t a2=da_dword(mem,addr+2);
+            snprintf(buf,bufsz,"LOAD R%u, [0x%X]",r,a2); return 6; }
+        case OP_STOR: {
+            uint32_t a2=da_dword(mem,addr+1); uint8_t r=da_byte(mem,addr+5)&7;
+            snprintf(buf,bufsz,"STOR [0x%X], R%u",a2,r); return 6; }
+        case OP_PRINT: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"PRINT R%u",r); return 2; }
+        case OP_READ: {
+            uint8_t r=da_byte(mem,addr+1)&7;
+            snprintf(buf,bufsz,"READ R%u",r); return 2; }
+        case OP_HALT: snprintf(buf,bufsz,"HALT"); return 1;
+        default:
+            snprintf(buf,bufsz,"DB   0x%02X",op); return 1;
+    }
+}
+
 void cpu_dump(CPU *cpu) {
     if (!cpu) return;
     printf("\n=== CPU State ===\n");
