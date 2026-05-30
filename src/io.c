@@ -28,7 +28,13 @@ uint32_t io_read_int(void) {
     printf("Input: ");
     fflush(stdout);
     uint32_t val = 0;
-    scanf("%u", &val);
+    if (scanf("%u", &val) != 1) {
+        val = 0;
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+        if (g_out_cb) g_out_cb("[INPUT] Invalid input — defaulting to 0");
+        else          fprintf(stderr, "[WARNING] Invalid input — defaulting to 0\n");
+    }
     if (g_out_cb) {
         char buf[32];
         snprintf(buf, sizeof(buf), "[INPUT] >> %u", val);

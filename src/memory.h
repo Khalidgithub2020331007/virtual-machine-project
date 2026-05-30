@@ -2,11 +2,13 @@
 #define MEMORY_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MEMORY_SIZE (1024 * 1024)  // 1MB RAM
 
 typedef struct {
     uint8_t data[MEMORY_SIZE];
+    bool    error;   // set on any out-of-bounds access; cleared by memory_init()
 } Memory;
 
 void memory_init(Memory *mem);

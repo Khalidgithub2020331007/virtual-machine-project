@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "cpu.h"
 #include "instructions.h"
 #include "io.h"
+
+static void cpu_error(CPU *cpu, const char *msg) {
+    io_print_string(msg);
+    cpu->running = false;
+}
 
 void cpu_init(CPU *cpu, Memory *mem) {
     for (int i = 0; i < NUM_REGISTERS; i++)
@@ -95,8 +101,9 @@ void cpu_step(CPU *cpu) {
             uint8_t dst = fetch_byte(cpu);
             uint8_t src = fetch_byte(cpu);
             if (cpu->reg[src & 0x07] == 0) {
-                fprintf(stderr, "[ERROR] Division by zero at PC=0x%08X\n", cpu->pc);
-                cpu->running = false;
+                char msg[64];
+                snprintf(msg, sizeof(msg), "[ERROR] Division by zero at PC=0x%08X", cpu->pc);
+                cpu_error(cpu, msg);
                 break;
             }
             int32_t result = (int32_t)cpu->reg[dst & 0x07] / (int32_t)cpu->reg[src & 0x07];
@@ -203,6 +210,12 @@ void cpu_step(CPU *cpu) {
         // PUSH reg
         case OP_PUSH: {
             uint8_t reg = fetch_byte(cpu);
+            if (cpu->sp < 4) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "[ERROR] Stack overflow at PC=0x%08X", cpu->pc - 2);
+                cpu_error(cpu, msg);
+                break;
+            }
             cpu->sp -= 4;
             memory_write_dword(cpu->mem, cpu->sp, cpu->reg[reg & 0x07]);
             break;
@@ -211,6 +224,12 @@ void cpu_step(CPU *cpu) {
         // POP reg
         case OP_POP: {
             uint8_t reg = fetch_byte(cpu);
+            if (cpu->sp >= STACK_START) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "[ERROR] Stack underflow at PC=0x%08X", cpu->pc - 2);
+                cpu_error(cpu, msg);
+                break;
+            }
             cpu->reg[reg & 0x07] = memory_read_dword(cpu->mem, cpu->sp);
             cpu->sp += 4;
             break;
@@ -219,6 +238,12 @@ void cpu_step(CPU *cpu) {
         // CALL address
         case OP_CALL: {
             uint32_t addr = fetch_dword(cpu);
+            if (cpu->sp < 4) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "[ERROR] Stack overflow (CALL) at PC=0x%08X", cpu->pc - 5);
+                cpu_error(cpu, msg);
+                break;
+            }
             cpu->sp -= 4;
             memory_write_dword(cpu->mem, cpu->sp, cpu->pc);  // save return address
             cpu->pc = addr;
@@ -227,6 +252,12 @@ void cpu_step(CPU *cpu) {
 
         // RET
         case OP_RET: {
+            if (cpu->sp >= STACK_START) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "[ERROR] Stack underflow (RET) at PC=0x%08X", cpu->pc - 1);
+                cpu_error(cpu, msg);
+                break;
+            }
             cpu->pc = memory_read_dword(cpu->mem, cpu->sp);
             cpu->sp += 4;
             break;
@@ -268,10 +299,19 @@ void cpu_step(CPU *cpu) {
             cpu->running = false;
             break;
 
-        default:
-            fprintf(stderr, "[ERROR] Unknown opcode 0x%02X at PC=0x%08X\n", opcode, cpu->pc - 1);
-            cpu->running = false;
+        default: {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "[ERROR] Unknown opcode 0x%02X at PC=0x%08X", opcode, cpu->pc - 1);
+            cpu_error(cpu, msg);
             break;
+        }
+    }
+
+    if (cpu->mem->error) {
+        cpu->mem->error = false;
+        char msg[64];
+        snprintf(msg, sizeof(msg), "[ERROR] Memory out-of-bounds — halting at PC=0x%08X", cpu->pc);
+        cpu_error(cpu, msg);
     }
 }
 

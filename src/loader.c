@@ -2,6 +2,14 @@
 #include "loader.h"
 
 int loader_load_file(Memory *mem, const char *filename, uint32_t start_address) {
+    if (!filename) {
+        fprintf(stderr, "[ERROR] Loader: NULL filename\n");
+        return -1;
+    }
+    if (start_address >= MEMORY_SIZE) {
+        fprintf(stderr, "[ERROR] Loader: start address 0x%08X is out of bounds\n", start_address);
+        return -1;
+    }
     FILE *f = fopen(filename, "rb");
     if (!f) {
         fprintf(stderr, "[ERROR] Cannot open program file: %s\n", filename);

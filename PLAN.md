@@ -123,22 +123,22 @@ The VM backend (CPU, Memory, Loader, I/O) will be decoupled from a GUI frontend 
 - [x] Input test: read a number, multiply by 2, print result (verify UI input modal)
 
 ### Step 12: Build a Simple Assembler (Text → Binary)
-- [ ] Define assembly text format (e.g. `MOV R0, 10`)
-- [ ] Write assembler in C that reads `.asm` file
-- [ ] Convert each text instruction to binary opcode
-- [ ] Output `.bin` file ready for the VM
-- [ ] Test assembler with all sample programs
+- [x] Define assembly text format (e.g. `MOV R0, 10`)
+- [x] Write assembler in C that reads `.asm` file
+- [x] Convert each text instruction to binary opcode
+- [x] Output `.bin` file ready for the VM
+- [x] Test assembler with all sample programs
 
 ---
 
 ## Phase 5 — Polish, UI Enhancements & Report (Week 4)
 
 ### Step 13: Error Handling & Stability
-- [ ] Handle all invalid opcodes gracefully (show in UI and logs)
-- [ ] Handle stack overflow / underflow (show warnings in UI)
-- [ ] Handle division by zero (already done)
-- [ ] Handle memory out-of-bounds (already done)
-- [ ] Add input validation in loader
+- [x] Handle all invalid opcodes gracefully (show in UI and logs)
+- [x] Handle stack overflow / underflow (show warnings in UI)
+- [x] Handle division by zero (already done)
+- [x] Handle memory out-of-bounds (already done)
+- [x] Add input validation in loader
 
 ### Step 14: Debugging Tools (UI-enabled)
 - [ ] Add `--debug` flag and GUI debug mode to step through instructions one by one
@@ -222,6 +222,6 @@ These tasks are optional and should only be attempted after the core features ar
 | I/O Module | Done |
 | Basic Test (10+20=30) | Done |
 | Test Programs (countdown, factorial, fibonacci, input) | Done |
-| Assembler | Pending |
+| Assembler | Done |
 | Debugger | Pending |
 | Report | Pending |
