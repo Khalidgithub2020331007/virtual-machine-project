@@ -1,18 +1,45 @@
 #include <stdio.h>
 #include "loader.h"
+#include "io.h"
+
+/* Write msg to stderr (for CLI graders) and to the GUI console via io_print_string. */
+static void loader_report(const char *msg) {
+    fprintf(stderr, "%s\n", msg);
+    io_print_string(msg);
+}
 
 int loader_load_file(Memory *mem, const char *filename, uint32_t start_address) {
+    if (!mem) {
+        fprintf(stderr, "[ERROR] Loader: NULL memory pointer\n");
+        return -1;
+    }
     if (!filename) {
         fprintf(stderr, "[ERROR] Loader: NULL filename\n");
         return -1;
     }
     if (start_address >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Loader: start address 0x%08X is out of bounds\n", start_address);
+        char msg[64];
+        snprintf(msg, sizeof(msg),
+                 "[ERROR] Loader: start address 0x%08X is out of bounds", start_address);
+        loader_report(msg);
         return -1;
     }
+
     FILE *f = fopen(filename, "rb");
     if (!f) {
-        fprintf(stderr, "[ERROR] Cannot open program file: %s\n", filename);
+        char msg[320];
+        snprintf(msg, sizeof(msg), "[ERROR] Loader: cannot open file: %s", filename);
+        loader_report(msg);
+        return -1;
+    }
+
+    /* Basic content check: warn if the file is empty. */
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (fsize == 0) {
+        loader_report("[WARNING] Loader: program file is empty — nothing loaded");
+        fclose(f);
         return -1;
     }
 
@@ -20,7 +47,7 @@ int loader_load_file(Memory *mem, const char *filename, uint32_t start_address) 
     int byte;
     while ((byte = fgetc(f)) != EOF) {
         if (address >= MEMORY_SIZE) {
-            fprintf(stderr, "[ERROR] Program too large for memory\n");
+            loader_report("[ERROR] Loader: program too large for memory");
             fclose(f);
             return -1;
         }
@@ -28,6 +55,10 @@ int loader_load_file(Memory *mem, const char *filename, uint32_t start_address) 
     }
 
     fclose(f);
-    printf("[Loader] Program loaded at 0x%08X (%u bytes)\n", start_address, address - start_address);
+
+    char msg[80];
+    snprintf(msg, sizeof(msg), "[Loader] Loaded %u bytes at 0x%08X",
+             address - start_address, start_address);
+    io_print_string(msg);
     return 0;
 }

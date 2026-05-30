@@ -11,6 +11,7 @@ static void cpu_error(CPU *cpu, const char *msg) {
 }
 
 void cpu_init(CPU *cpu, Memory *mem) {
+    if (!cpu || !mem) { fprintf(stderr, "[ERROR] cpu_init: NULL pointer\n"); return; }
     for (int i = 0; i < NUM_REGISTERS; i++)
         cpu->reg[i] = 0;
     cpu->pc      = 0x0000;
@@ -43,6 +44,7 @@ static uint32_t fetch_dword(CPU *cpu) {
 }
 
 void cpu_step(CPU *cpu) {
+    if (!cpu || !cpu->mem) { fprintf(stderr, "[ERROR] cpu_step: NULL pointer\n"); return; }
     uint8_t opcode = fetch_byte(cpu);
 
     switch (opcode) {
@@ -212,7 +214,7 @@ void cpu_step(CPU *cpu) {
             uint8_t reg = fetch_byte(cpu);
             if (cpu->sp < 4) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[ERROR] Stack overflow at PC=0x%08X", cpu->pc - 2);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack overflow at PC=0x%08X", cpu->pc - 2);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -226,7 +228,7 @@ void cpu_step(CPU *cpu) {
             uint8_t reg = fetch_byte(cpu);
             if (cpu->sp >= STACK_START) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[ERROR] Stack underflow at PC=0x%08X", cpu->pc - 2);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack underflow at PC=0x%08X", cpu->pc - 2);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -240,7 +242,7 @@ void cpu_step(CPU *cpu) {
             uint32_t addr = fetch_dword(cpu);
             if (cpu->sp < 4) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[ERROR] Stack overflow (CALL) at PC=0x%08X", cpu->pc - 5);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack overflow (CALL) at PC=0x%08X", cpu->pc - 5);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -254,7 +256,7 @@ void cpu_step(CPU *cpu) {
         case OP_RET: {
             if (cpu->sp >= STACK_START) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[ERROR] Stack underflow (RET) at PC=0x%08X", cpu->pc - 1);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack underflow (RET) at PC=0x%08X", cpu->pc - 1);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -295,7 +297,7 @@ void cpu_step(CPU *cpu) {
 
         // HALT
         case OP_HALT:
-            printf("[VM] HALT — program finished.\n");
+            io_print_string("[VM] HALT — program finished.");
             cpu->running = false;
             break;
 
@@ -316,12 +318,14 @@ void cpu_step(CPU *cpu) {
 }
 
 void cpu_run(CPU *cpu) {
+    if (!cpu) return;
     while (cpu->running) {
         cpu_step(cpu);
     }
 }
 
 void cpu_dump(CPU *cpu) {
+    if (!cpu) return;
     printf("\n=== CPU State ===\n");
     for (int i = 0; i < NUM_REGISTERS; i++)
         printf("  R%d = %u (0x%08X)\n", i, cpu->reg[i], cpu->reg[i]);
