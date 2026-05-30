@@ -1,0 +1,295 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "cpu.h"
+#include "instructions.h"
+
+void cpu_init(CPU *cpu, Memory *mem) {
+    for (int i = 0; i < NUM_REGISTERS; i++)
+        cpu->reg[i] = 0;
+    cpu->pc      = 0x0000;
+    cpu->sp      = STACK_START;
+    cpu->flags.zero     = false;
+    cpu->flags.negative = false;
+    cpu->flags.overflow = false;
+    cpu->running = true;
+    cpu->mem     = mem;
+}
+
+// Update flags based on result
+static void update_flags(CPU *cpu, int32_t result) {
+    cpu->flags.zero     = (result == 0);
+    cpu->flags.negative = (result < 0);
+}
+
+// Fetch next byte from memory and advance PC
+static uint8_t fetch_byte(CPU *cpu) {
+    uint8_t val = memory_read_byte(cpu->mem, cpu->pc);
+    cpu->pc++;
+    return val;
+}
+
+// Fetch next 32-bit value and advance PC
+static uint32_t fetch_dword(CPU *cpu) {
+    uint32_t val = memory_read_dword(cpu->mem, cpu->pc);
+    cpu->pc += 4;
+    return val;
+}
+
+void cpu_step(CPU *cpu) {
+    uint8_t opcode = fetch_byte(cpu);
+
+    switch (opcode) {
+
+        case OP_NOP:
+            break;
+
+        // MOV reg, immediate
+        case OP_MOV: {
+            uint8_t  reg = fetch_byte(cpu);
+            uint32_t imm = fetch_dword(cpu);
+            cpu->reg[reg & 0x07] = imm;
+            break;
+        }
+
+        // MOV reg, reg
+        case OP_MOVR: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            cpu->reg[dst & 0x07] = cpu->reg[src & 0x07];
+            break;
+        }
+
+        // ADD dst, src
+        case OP_ADD: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            int32_t result = (int32_t)cpu->reg[dst & 0x07] + (int32_t)cpu->reg[src & 0x07];
+            cpu->reg[dst & 0x07] = (uint32_t)result;
+            update_flags(cpu, result);
+            break;
+        }
+
+        // SUB dst, src
+        case OP_SUB: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            int32_t result = (int32_t)cpu->reg[dst & 0x07] - (int32_t)cpu->reg[src & 0x07];
+            cpu->reg[dst & 0x07] = (uint32_t)result;
+            update_flags(cpu, result);
+            break;
+        }
+
+        // MUL dst, src
+        case OP_MUL: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            int32_t result = (int32_t)cpu->reg[dst & 0x07] * (int32_t)cpu->reg[src & 0x07];
+            cpu->reg[dst & 0x07] = (uint32_t)result;
+            update_flags(cpu, result);
+            break;
+        }
+
+        // DIV dst, src
+        case OP_DIV: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            if (cpu->reg[src & 0x07] == 0) {
+                fprintf(stderr, "[ERROR] Division by zero at PC=0x%08X\n", cpu->pc);
+                cpu->running = false;
+                break;
+            }
+            int32_t result = (int32_t)cpu->reg[dst & 0x07] / (int32_t)cpu->reg[src & 0x07];
+            cpu->reg[dst & 0x07] = (uint32_t)result;
+            update_flags(cpu, result);
+            break;
+        }
+
+        // INC reg
+        case OP_INC: {
+            uint8_t reg = fetch_byte(cpu);
+            cpu->reg[reg & 0x07]++;
+            update_flags(cpu, (int32_t)cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // DEC reg
+        case OP_DEC: {
+            uint8_t reg = fetch_byte(cpu);
+            cpu->reg[reg & 0x07]--;
+            update_flags(cpu, (int32_t)cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // AND dst, src
+        case OP_AND: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            cpu->reg[dst & 0x07] &= cpu->reg[src & 0x07];
+            update_flags(cpu, (int32_t)cpu->reg[dst & 0x07]);
+            break;
+        }
+
+        // OR dst, src
+        case OP_OR: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            cpu->reg[dst & 0x07] |= cpu->reg[src & 0x07];
+            update_flags(cpu, (int32_t)cpu->reg[dst & 0x07]);
+            break;
+        }
+
+        // XOR dst, src
+        case OP_XOR: {
+            uint8_t dst = fetch_byte(cpu);
+            uint8_t src = fetch_byte(cpu);
+            cpu->reg[dst & 0x07] ^= cpu->reg[src & 0x07];
+            update_flags(cpu, (int32_t)cpu->reg[dst & 0x07]);
+            break;
+        }
+
+        // NOT reg
+        case OP_NOT: {
+            uint8_t reg = fetch_byte(cpu);
+            cpu->reg[reg & 0x07] = ~cpu->reg[reg & 0x07];
+            update_flags(cpu, (int32_t)cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // CMP reg, reg  (sets flags, doesn't store result)
+        case OP_CMP: {
+            uint8_t a = fetch_byte(cpu);
+            uint8_t b = fetch_byte(cpu);
+            int32_t result = (int32_t)cpu->reg[a & 0x07] - (int32_t)cpu->reg[b & 0x07];
+            update_flags(cpu, result);
+            break;
+        }
+
+        // JMP address
+        case OP_JMP: {
+            uint32_t addr = fetch_dword(cpu);
+            cpu->pc = addr;
+            break;
+        }
+
+        // JE address (jump if zero flag set)
+        case OP_JE: {
+            uint32_t addr = fetch_dword(cpu);
+            if (cpu->flags.zero) cpu->pc = addr;
+            break;
+        }
+
+        // JNE address
+        case OP_JNE: {
+            uint32_t addr = fetch_dword(cpu);
+            if (!cpu->flags.zero) cpu->pc = addr;
+            break;
+        }
+
+        // JG address (jump if not zero and not negative)
+        case OP_JG: {
+            uint32_t addr = fetch_dword(cpu);
+            if (!cpu->flags.zero && !cpu->flags.negative) cpu->pc = addr;
+            break;
+        }
+
+        // JL address (jump if negative)
+        case OP_JL: {
+            uint32_t addr = fetch_dword(cpu);
+            if (cpu->flags.negative) cpu->pc = addr;
+            break;
+        }
+
+        // PUSH reg
+        case OP_PUSH: {
+            uint8_t reg = fetch_byte(cpu);
+            cpu->sp -= 4;
+            memory_write_dword(cpu->mem, cpu->sp, cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // POP reg
+        case OP_POP: {
+            uint8_t reg = fetch_byte(cpu);
+            cpu->reg[reg & 0x07] = memory_read_dword(cpu->mem, cpu->sp);
+            cpu->sp += 4;
+            break;
+        }
+
+        // CALL address
+        case OP_CALL: {
+            uint32_t addr = fetch_dword(cpu);
+            cpu->sp -= 4;
+            memory_write_dword(cpu->mem, cpu->sp, cpu->pc);  // save return address
+            cpu->pc = addr;
+            break;
+        }
+
+        // RET
+        case OP_RET: {
+            cpu->pc = memory_read_dword(cpu->mem, cpu->sp);
+            cpu->sp += 4;
+            break;
+        }
+
+        // LOAD reg, [address]
+        case OP_LOAD: {
+            uint8_t  reg  = fetch_byte(cpu);
+            uint32_t addr = fetch_dword(cpu);
+            cpu->reg[reg & 0x07] = memory_read_dword(cpu->mem, addr);
+            break;
+        }
+
+        // STOR [address], reg
+        case OP_STOR: {
+            uint32_t addr = fetch_dword(cpu);
+            uint8_t  reg  = fetch_byte(cpu);
+            memory_write_dword(cpu->mem, addr, cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // PRINT reg
+        case OP_PRINT: {
+            uint8_t reg = fetch_byte(cpu);
+            printf("%u\n", cpu->reg[reg & 0x07]);
+            break;
+        }
+
+        // READ reg
+        case OP_READ: {
+            uint8_t reg = fetch_byte(cpu);
+            uint32_t val;
+            printf("Input: ");
+            scanf("%u", &val);
+            cpu->reg[reg & 0x07] = val;
+            break;
+        }
+
+        // HALT
+        case OP_HALT:
+            printf("[VM] HALT — program finished.\n");
+            cpu->running = false;
+            break;
+
+        default:
+            fprintf(stderr, "[ERROR] Unknown opcode 0x%02X at PC=0x%08X\n", opcode, cpu->pc - 1);
+            cpu->running = false;
+            break;
+    }
+}
+
+void cpu_run(CPU *cpu) {
+    while (cpu->running) {
+        cpu_step(cpu);
+    }
+}
+
+void cpu_dump(CPU *cpu) {
+    printf("\n=== CPU State ===\n");
+    for (int i = 0; i < NUM_REGISTERS; i++)
+        printf("  R%d = %u (0x%08X)\n", i, cpu->reg[i], cpu->reg[i]);
+    printf("  PC = 0x%08X\n", cpu->pc);
+    printf("  SP = 0x%08X\n", cpu->sp);
+    printf("  Flags: ZERO=%d  NEG=%d  OVF=%d\n",
+           cpu->flags.zero, cpu->flags.negative, cpu->flags.overflow);
+    printf("=================\n\n");
+}
