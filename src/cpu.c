@@ -242,7 +242,7 @@ void cpu_step(CPU *cpu) {
             uint32_t addr = fetch_dword(cpu);
             if (cpu->sp < 4) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[WARNING] Stack overflow (CALL) at PC=0x%08X", cpu->pc - 5);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack overflow at PC=0x%08X", cpu->pc - 5);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -256,7 +256,7 @@ void cpu_step(CPU *cpu) {
         case OP_RET: {
             if (cpu->sp >= STACK_START) {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "[WARNING] Stack underflow (RET) at PC=0x%08X", cpu->pc - 1);
+                snprintf(msg, sizeof(msg), "[WARNING] Stack underflow at PC=0x%08X", cpu->pc - 1);
                 cpu_error(cpu, msg);
                 break;
             }
@@ -312,7 +312,7 @@ void cpu_step(CPU *cpu) {
     if (cpu->mem->error) {
         cpu->mem->error = false;
         char msg[64];
-        snprintf(msg, sizeof(msg), "[ERROR] Memory out-of-bounds — halting at PC=0x%08X", cpu->pc);
+        snprintf(msg, sizeof(msg), "[ERROR] Memory access out of bounds at PC=0x%08X", cpu->pc);
         cpu_error(cpu, msg);
     }
 }

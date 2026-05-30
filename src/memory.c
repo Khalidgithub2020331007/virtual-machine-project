@@ -11,7 +11,7 @@ void memory_init(Memory *mem) {
 uint8_t memory_read_byte(Memory *mem, uint32_t address) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_read_byte: NULL pointer\n"); return 0; }
     if (address >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory read out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory read out of bounds at 0x%08X\n", address);
         mem->error = true;
         return 0;
     }
@@ -21,7 +21,7 @@ uint8_t memory_read_byte(Memory *mem, uint32_t address) {
 uint16_t memory_read_word(Memory *mem, uint32_t address) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_read_word: NULL pointer\n"); return 0; }
     if (address + 1 >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory read out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory read out of bounds at 0x%08X\n", address);
         mem->error = true;
         return 0;
     }
@@ -31,7 +31,7 @@ uint16_t memory_read_word(Memory *mem, uint32_t address) {
 uint32_t memory_read_dword(Memory *mem, uint32_t address) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_read_dword: NULL pointer\n"); return 0; }
     if (address + 3 >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory read out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory read out of bounds at 0x%08X\n", address);
         mem->error = true;
         return 0;
     }
@@ -44,7 +44,7 @@ uint32_t memory_read_dword(Memory *mem, uint32_t address) {
 void memory_write_byte(Memory *mem, uint32_t address, uint8_t value) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_write_byte: NULL pointer\n"); return; }
     if (address >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory write out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory write out of bounds at 0x%08X\n", address);
         mem->error = true;
         return;
     }
@@ -54,7 +54,7 @@ void memory_write_byte(Memory *mem, uint32_t address, uint8_t value) {
 void memory_write_word(Memory *mem, uint32_t address, uint16_t value) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_write_word: NULL pointer\n"); return; }
     if (address + 1 >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory write out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory write out of bounds at 0x%08X\n", address);
         mem->error = true;
         return;
     }
@@ -65,7 +65,7 @@ void memory_write_word(Memory *mem, uint32_t address, uint16_t value) {
 void memory_write_dword(Memory *mem, uint32_t address, uint32_t value) {
     if (!mem) { fprintf(stderr, "[ERROR] memory_write_dword: NULL pointer\n"); return; }
     if (address + 3 >= MEMORY_SIZE) {
-        fprintf(stderr, "[ERROR] Memory write out of bounds: 0x%08X\n", address);
+        fprintf(stderr, "[ERROR] Memory write out of bounds at 0x%08X\n", address);
         mem->error = true;
         return;
     }
