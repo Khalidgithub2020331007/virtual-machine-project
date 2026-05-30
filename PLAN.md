@@ -117,10 +117,10 @@ The VM backend (CPU, Memory, Loader, I/O) will be decoupled from a GUI frontend 
 
 ### Step 11: Write Test Programs (Binary) and UI tests
 - [x] Basic test: `R0 = 10 + 20`, print result (= 30)
-- [ ] Countdown: print numbers from 10 down to 0 (verify UI console)
-- [ ] Factorial: calculate 5! = 120 (verify UI registers/memory)
-- [ ] Fibonacci: print first 10 fibonacci numbers (verify UI console)
-- [ ] Input test: read a number, multiply by 2, print result (verify UI input modal)
+- [x] Countdown: print numbers from 10 down to 0 (verify UI console)
+- [x] Factorial: calculate 5! = 120 using CALL/RET (verify UI registers/memory)
+- [x] Fibonacci: print first 10 fibonacci numbers (verify UI console)
+- [x] Input test: read a number, multiply by 2, print result (verify UI input modal)
 
 ### Step 12: Build a Simple Assembler (Text → Binary)
 - [ ] Define assembly text format (e.g. `MOV R0, 10`)
@@ -221,7 +221,7 @@ These tasks are optional and should only be attempted after the core features ar
 | Program Loader | Done |
 | I/O Module | Done |
 | Basic Test (10+20=30) | Done |
-| Test Programs (factorial, fibonacci) | Pending |
+| Test Programs (countdown, factorial, fibonacci, input) | Done |
 | Assembler | Pending |
 | Debugger | Pending |
 | Report | Pending |
