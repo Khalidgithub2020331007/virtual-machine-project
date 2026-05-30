@@ -375,13 +375,46 @@ static void draw_sidebar(void) {
         txt(f, "(none loaded)", x, y, lbl);
     }
 
+    // ── Disassembly trace ──────────────────────────────────────────────────────
+    y += 8;
+    txt(f, "DISASSEMBLY", x, y, head); y += 20;
+    if (g_cpu && g_mem) {
+        uint32_t a = g_cpu->pc;
+        int max_lines = (WIN_H - 82 - y) / 15;
+        if (max_lines > 9) max_lines = 9;
+        for (int i = 0; i < max_lines && a < MEMORY_SIZE; i++) {
+            bool is_bp = false;
+            for (int b = 0; b < g_bp_count; b++)
+                if (g_bp[b] == a) { is_bp = true; break; }
+
+            if (i == 0) {
+                SDL_Rect hl = {x-2, y-1, SIDEBAR_W-12, 14};
+                fill(hl, (SDL_Color){35,55,85,200});
+            }
+
+            char dis[48], line[60];
+            int  n = cpu_disasm(g_mem, a, dis, sizeof(dis));
+            snprintf(line, sizeof(line), "%c%06X %s",
+                     is_bp ? '*' : ' ', a, dis);
+
+            SDL_Color lc = (i == 0)  ? pcc :
+                           is_bp     ? (SDL_Color){255,80,80,255} : val;
+            txt(f, line, x, y, lc);
+            y += 15;
+            a += (n > 0) ? (uint32_t)n : 1;
+        }
+    } else {
+        txt(f, "(no program)", x, y, lbl);
+    }
+
     // ── Keyboard hints at bottom ───────────────────────────────────────────
-    int hy = WIN_H - 70;
+    int hy = WIN_H - 82;
     SDL_Color hint = {60, 60, 80, 255};
     txt(f, "F5   Run",          x, hy,      hint);
-    txt(f, "F10  Step",         x, hy + 16, hint);
-    txt(f, "F6   Pause/Resume", x, hy + 32, hint);
-    txt(f, "Esc  Quit",         x, hy + 48, hint);
+    txt(f, "F10  Step",         x, hy + 14, hint);
+    txt(f, "F6   Pause/Resume", x, hy + 28, hint);
+    txt(f, "F9   Toggle BRKPT", x, hy + 42, hint);
+    txt(f, "Esc  Quit",         x, hy + 56, hint);
 }
 
 // ── Memory hex view ───────────────────────────────────────────────────────────
@@ -628,4 +661,26 @@ static void act_reset(void) {
     g_vmstate   = VM_STOPPED;
     g_memscroll = 0;
     gui_console_append("[RESET] VM reset to initial state.");
+}
+
+static void act_toggle_breakpoint(void) {
+    if (!g_cpu) return;
+    uint32_t addr = g_cpu->pc;
+    for (int i = 0; i < g_bp_count; i++) {
+        if (g_bp[i] == addr) {
+            g_bp[i] = g_bp[--g_bp_count];
+            char msg[48];
+            snprintf(msg, sizeof(msg), "[BRKPT] Removed at 0x%08X", addr);
+            gui_console_append(msg);
+            return;
+        }
+    }
+    if (g_bp_count < MAX_BP) {
+        g_bp[g_bp_count++] = addr;
+        char msg[48];
+        snprintf(msg, sizeof(msg), "[BRKPT] Set at 0x%08X", addr);
+        gui_console_append(msg);
+    } else {
+        gui_console_append("[BRKPT] Max breakpoints reached (16).");
+    }
 }
