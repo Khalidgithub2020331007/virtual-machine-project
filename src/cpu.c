@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "cpu.h"
 #include "instructions.h"
+#include "io.h"
 
 void cpu_init(CPU *cpu, Memory *mem) {
     for (int i = 0; i < NUM_REGISTERS; i++)
@@ -250,17 +251,14 @@ void cpu_step(CPU *cpu) {
         // PRINT reg
         case OP_PRINT: {
             uint8_t reg = fetch_byte(cpu);
-            printf("%u\n", cpu->reg[reg & 0x07]);
+            io_print_int(cpu->reg[reg & 0x07]);
             break;
         }
 
         // READ reg
         case OP_READ: {
             uint8_t reg = fetch_byte(cpu);
-            uint32_t val;
-            printf("Input: ");
-            scanf("%u", &val);
-            cpu->reg[reg & 0x07] = val;
+            cpu->reg[reg & 0x07] = io_read_int();
             break;
         }
 

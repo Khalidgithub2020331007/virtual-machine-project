@@ -59,9 +59,9 @@ The VM backend (CPU, Memory, Loader, I/O) will be decoupled from a GUI frontend 
 
 ### Step 4: GUI Skeleton
 - [x] Create a minimal SDL2 window and event loop
-- [ ] Design basic UI layout: sidebar for registers/flags, main area for memory, bottom console and control toolbar
-- [ ] Implement placeholder rendering for register values and memory hex view
-- [ ] Add UI controls: Load, Run, Pause, Step, Reset
+- [x] Design basic UI layout: sidebar for registers/flags, main area for memory, bottom console and control toolbar
+- [x] Implement placeholder rendering for register values and memory hex view
+- [x] Add UI controls: Load, Run, Pause, Step, Reset
 
 ### Step 5: CPU Registers & State
 - [x] Define 8 general purpose registers (R0 - R7)
